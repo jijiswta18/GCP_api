@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false}));
 
 //route
-app.use('/api', ManageEmployee, SelectItem, Register, Receipt);
+app.use('/api_gcp', ManageEmployee, SelectItem, Register, Receipt);
 
 //Custom middleware
 app.use(logger);

@@ -36,13 +36,69 @@ router.post('/Register/addRegister', (req,res) => {
     }
 })
 
+router.post('/Register/editRegister', (req,res) => {
+    try {
+
+        const updateData =  {
+            "title_name"                : req.body.title_name,
+            "title_name_other"          : req.body.title_name_other,
+            "name_th"                   : req.body.name_th,
+            "lastname_th"               : req.body.lastname_th,
+            "name_en"                   : req.body.name_en,
+            "lastname_en"               : req.body.lastname_en,
+            "education"                 : req.body.education,
+            "company_name"              : req.body.company_name,
+            "company_address"           : req.body.company_address,
+            "province_id"               : req.body.province_id,
+            "district_id"               : req.body.district_id,
+            "subdistrict_id"            : req.body.subdistrict_id,
+            "postcode"                  :  req.body.postcode,
+            "email"                     : req.body.email,
+            "phone"                     : req.body.phone,
+            "phone_other"               : req.body.phone_other,
+            "employee_id"               : req.body.employee_id,
+            "job_position"              : req.body.job_position,
+            "job_position_other"        : req.body.job_position_other,
+            "work_experience"           : req.body.work_experience,
+            "food_allergy"              : req.body.food_allergy,
+            "food_allergy_detail"       : req.body.food_allergy_detail,
+            "food"                      : req.body.food,
+            "food_other"                : req.body.food_other,
+            "confirm_receipt"           : req.body.select_receipt, 
+            "confirm_register"          : req.body.confirm_register,
+            "modified_by"               : req.body.modified_by,
+            "modified_date"             : req.body.modified_date,
+       
+        }
+
+        const sql = 'UPDATE register SET ? WHERE id = ?';
+        db.query(sql,[updateData, req.body.register_id],(error, results, fields) => {
+
+            console.log(error);
+            
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+            }
+
+
+            return res.json(result)
+
+        })
+    } catch (error) {
+        console.log('addRegister',error);
+    }
+})
+
 
 router.post('/Register/updateReferenceRegister', (req,res) => {
     try {
 
-        console.log(req.body);
-
-        updateData =  {
+        const updateData =  {
             "reference_no_1"  : req.body.reference_no_1,
             "reference_no_2"  : req.body.reference_no_2
         }
@@ -173,11 +229,11 @@ router.post('/Register/MapRefAndAmount', (req,res) => {
 })
 
 
-
 router.get('/Register/getRegister', (req, res) => {
     try {
 
         // const sql = "SELECT * FROM register"
+        
         const query = `
         SELECT register.*,
         (SELECT name FROM select_list WHERE select_list.select_code = register.title_name) AS titleName,
@@ -215,10 +271,12 @@ router.get('/Register/statusRegisterReceipt', (req, res) => {
     try {
 
         const query = `
-        SELECT A.* , B.name AS  statusRegisterName    
+            SELECT A.*, B.name AS  statusRegister, C.name AS statusReceipt
             FROM register AS A
             LEFT JOIN select_list AS B
-            ON B.select_code = A.status_register
+            ON  A.status_register = B.select_code
+            LEFT JOIN select_list AS C
+            ON A.status_receipt = C.select_code
             WHERE A.status_register = '12003'
         `;
 
@@ -286,51 +344,6 @@ router.get('/Register/getRegisterById/:id', (req, res) => {
     }
 });
 
-// router.route('/Register/sendMail')
-// .post(async (req, res, next) => {
-
-
-
-//     var smtp = await {
-//         host: 'smtp.office365.com', //set to your host name or ip
-//         port: 587, //25, 465, 587 depend on your 
-//         secure: false, // use SSL\
-//         auth: {
-//             user: 'sawitta.sri@cra.ac.th', // your Outlook email address
-//             pass: 'Jiji180939*' // your Outlook email password
-//           }  
-//     };
-
-//     var smtpTransport = await nodemailer.createTransport(smtp);
-
-    
-
-//     let mailOptions = await {}
-
-//     mailOptions = await {
-//         from: "sawitta.sri@cra.ac.th",
-//         to: req.body.mail,
-//         subject: 'File Attachment Example',
-//         html: `<p>ทดสอบการส่งอีเมล</p>` +
-//         `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` ,
-//     };
-
-//     await smtpTransport.sendMail(mailOptions, function(error, response){
-//         smtpTransport.close();
-//         if(error){
-//             console.log('sent mail follow',error);
-//         //error handler
-//         }else{
-//         //success handler 
-//         console.log('send email success');
-//         }
-//     });
-
-//     return res.json('success')
-
-// })
-
-
 router.post('/Register/sendMail', async (req, res) => {
     
     var smtp = await {
@@ -362,6 +375,61 @@ router.post('/Register/sendMail', async (req, res) => {
       }
 
 });
+
+router.get('/Register/checkEmail', (req, res) => {
+    
+    const { email } = req.query;
+    
+    const query = `SELECT * FROM register WHERE email = ?`
+
+    db.query(query, email, function(error, results, fields){
+
+        console.log(results);
+
+        if (error) {
+            console.error('Error checking email:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (results.length > 0) {
+              // Email มีอยู่แล้ว
+              res.json({ exists: true, message: 'Email already exists in the database', data: results });
+            } else {
+              // Email ไม่มีอยู่ในฐานข้อมูล
+              res.json({ exists: false, message: 'Email does not exist in the database' });
+            }
+        }
+
+    })
+
+});
+
+router.get('/Register/checkPhone', (req, res) => {
+    
+    const { phone } = req.query;
+    
+    const query = `SELECT * FROM register WHERE phone = ?`
+
+    db.query(query, phone, function(error, results, fields){
+
+        console.log('===========',results);
+
+        if (error) {
+            console.error('Error checking Phone:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (results.length > 0) {
+              // Email มีอยู่แล้ว
+              res.json({ success: true, message: 'Phone already exists in the database', data: results });
+            } else {
+              // Email ไม่มีอยู่ในฐานข้อมูล
+              res.json({ success: false, message: 'Phone does not exist in the database' });
+            }
+        }
+
+    })
+
+});
+
 
 
 module.exports = router;
