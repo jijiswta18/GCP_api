@@ -430,6 +430,39 @@ router.get('/Register/checkPhone', (req, res) => {
 
 });
 
+router.get('/Register/getMenuRegisterOpening', (req, res) => {
+    
+    const { phone } = req.query;
+    
+    const query = `
+    SELECT * 
+    FROM register_opening_date 
+    WHERE start_date >= NOW() AND end_date <= NOW();
+    
+    `
+
+    db.query(query, phone, function(error, results, fields){
+
+        console.log('===========',results);
+
+        if (error) {
+            console.error('Error checking Phone:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (!results) {
+              // มีอยู่แล้ว
+              res.json(true);
+            } else {
+              //ไม่มีอยู่ในฐานข้อมูล
+              res.json(false);
+            }
+        }
+
+    })
+
+});
+
+
 
 
 module.exports = router;
