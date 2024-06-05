@@ -47,6 +47,9 @@ router.post('/Register/editRegister', (req,res) => {
             "name_en"                   : req.body.name_en,
             "lastname_en"               : req.body.lastname_en,
             "education"                 : req.body.education,
+            "receipt_name"              : req.body.receipt_name,
+            "id_card_number"            : req.body.id_card_number,
+            "confirm_receipt"           : req.body.confirm_receipt,
             "company_name"              : req.body.company_name,
             "company_address"           : req.body.company_address,
             "province_id"               : req.body.province_id,
@@ -64,7 +67,7 @@ router.post('/Register/editRegister', (req,res) => {
             "food_allergy_detail"       : req.body.food_allergy_detail,
             "food"                      : req.body.food,
             "food_other"                : req.body.food_other,
-            "confirm_receipt"           : req.body.select_receipt, 
+            "receipt_order"             : req.body.receipt_order, 
             "confirm_register"          : req.body.confirm_register,
             "modified_by"               : req.body.modified_by,
             "modified_date"             : req.body.modified_date,
@@ -183,12 +186,27 @@ router.post('/Register/MapStatusReceipt', (req,res) => {
                 "message": "Internal Server Error" // error.sqlMessage
             })
 
-            const result = {
-                "status": 200,
-            }
+            const sql_count = 'SELECT COUNT(*) as SUCCESS FROM  register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
+
+            db.query(sql_count,[req.body.reference_no_1, req.body.reference_no_2, req.body.course_price],(error, results, fields) => {
+    
+                if (error) return res.status(500).json({
+                    "status": 500,
+                    "message": "Internal Server Error" // error.sqlMessage
+                })
+    
+                return res.json(results);
+    
+                
+    
+            })
+
+            // const result = {
+            //     "status": 200,
+            // }
 
 
-            return res.json(result)
+            // return res.json(result)
 
         })
     } catch (error) {
@@ -202,12 +220,6 @@ router.post('/Register/MapRefAndAmount', (req,res) => {
 
 
         console.log(req.body);
-
-        // updateData =  {
-        //     "status_register"   : req.body.status_register,
-        //     "modified_by"       : req.body.modified_by,
-        //     "modified_date"     : req.body.modified_date
-        // }
 
         const sql = 'SELECT COUNT(*) as SUCCESS FROM  register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
 
@@ -462,6 +474,32 @@ router.get('/Register/getMenuRegisterOpening', (req, res) => {
 
 });
 
+
+router.post('/Register/CounterRegister', async (req, res) =>{
+
+    let sql = await "SELECT id  SET number_preview = number_preview + 1 WHERE id = " + `'${req.body.id}'`;
+
+    db.query(sql, async function (error,results,fields){
+
+        console.log(sql);
+
+        if (error) return res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error" // error.sqlMessage
+        })
+
+        const result = {
+            "status": 200,
+          
+        }
+
+        return res.json(result)
+     
+        
+    })
+    
+
+})
 
 
 
