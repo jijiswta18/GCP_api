@@ -169,31 +169,51 @@ router.post('/Register/MapStatusReceipt', (req,res) => {
     try {
 
 
-        console.log(req.body);
-
         updateData =  {
             "status_register"   : req.body.status_register,
             "modified_by"       : req.body.modified_by,
             "modified_date"     : req.body.modified_date
         }
 
-        const sql = 'UPDATE register SET ? WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
+        const sql = 'UPDATE register SET ? WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price = ? AND status_register = ?'; 
 
-        db.query(sql,[updateData, req.body.reference_no_1, req.body.reference_no_2, req.body.course_price],(error, results, fields) => {
+        db.query(sql,[updateData, req.body.reference_no_1, req.body.reference_no_2, req.body.course_price, '12001'],(error, results, fields) => {
+
+
+            let reference_no_1 = ''
+            let reference_no_2 = ''
+            let course_price = ''
 
             if (error) return res.status(500).json({
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
             })
 
+           
+
+            if(results.changedRows === 1){
+
+                reference_no_1  = req.body.reference_no_1
+                reference_no_2  = req.body.reference_no_2
+                course_price  = req.body.course_price
+
+            // }else{
+            //     console.error('Error updating record:', false);
+            }
+
+          
+
+       
             const sql_count = 'SELECT COUNT(*) as SUCCESS FROM  register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
 
-            db.query(sql_count,[req.body.reference_no_1, req.body.reference_no_2, req.body.course_price],(error, results, fields) => {
+            db.query(sql_count,[reference_no_1, reference_no_2, course_price],(error, results, fields) => {
     
                 if (error) return res.status(500).json({
                     "status": 500,
                     "message": "Internal Server Error" // error.sqlMessage
                 })
+
+                
     
                 return res.json(results);
     
@@ -375,10 +395,27 @@ router.post('/Register/sendMail', async (req, res) => {
         await transporter.sendMail({
             from: "sawitta.sri@cra.ac.th",
             to: req.body.mail,
-            subject: 'Test Example',
-            html: `<p>ทดสอบการส่งอีเมล</p>` +
-            `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` ,
+            subject: 'แจ้งรายละเอียดและยืนยันการเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567',
+            html: `<div class="container">
+                <h2>Confirmation of GCP Training Registration</h2>
+                <p>Dear Participant,</p>
+                <p>Thank you for registering for the "Good Clinical Practice: GCP" training course.</p>
+                <p>กำหนดการอบรมและสถานที่อบรม</p>
+                <ul>
+                <li>วันที่ 24-25 กรกฏาคม 2567</li>
+                <li>เวลา 08.00 – 16.00 น.</li>
+                <li>สถานที่จัดอบรม: ณ ห้องพระวิษณุ ชั้น 3 โรงแรมอัศวิน แกรนด์ คอนเวนชั่น</li>
+                </ul>
+                <p>ตรวจสอบรายชื่อผู้เข้าร่วมการอบรมได้ที่  <a href="https://daa/gcp2024">here</a></p>
+                <p>จึงเรียนมาเพื่อโปรดทราบ และดำเนินการเข้าร่วมการอบรมตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+            </div>`,
+            // html: `<p>ทดสอบการส่งอีเมล</p>` +
+            // `<b>หมายเหตุ : </b> <span>ข้อความและ e-mail นี้เป็นการสร้างอัตโนมัติจากระบบฯ ไม่ต้องตอบกลับ </span>` ,
+
+
         });
+
+
     
         res.status(200).json({ message: 'Email sent successfully' });
       } catch (error) {
@@ -417,13 +454,14 @@ router.get('/Register/checkEmail', (req, res) => {
 
 router.get('/Register/checkPhone', (req, res) => {
     
-    const { phone } = req.query;
-    
-    const query = `SELECT * FROM register WHERE phone = ?`
+    // const { phone, email } = req.query;
 
-    db.query(query, phone, function(error, results, fields){
+   
+  
 
-        console.log('===========',results);
+    const sql = `SELECT * FROM register WHERE phone = ? AND email = ? `;
+
+    db.query(sql, [req.query.phone, req.query.email], function(error, results, fields){
 
         if (error) {
             console.error('Error checking Phone:', error);
@@ -475,9 +513,16 @@ router.get('/Register/getMenuRegisterOpening', (req, res) => {
 });
 
 
-router.post('/Register/CounterRegister', async (req, res) =>{
+router.get('/Register/CounterRegister', async (req, res) =>{
 
-    let sql = await "SELECT id  SET number_preview = number_preview + 1 WHERE id = " + `'${req.body.id}'`;
+    const sql = `
+        SELECT Count(*) as COUNT,
+        IFNULL( SUM(check_course_other) , 0) AS sum_check_course_other 
+        from register  
+        WHERE course_id in (1,4) AND end_date >= NOW() AND create_date <= NOW() AND status_register = '12003'
+    `;
+
+    // let sql = await "SELECT Count(*) as Count, from register  WHERE course_id in (1,4)";
 
     db.query(sql, async function (error,results,fields){
 
@@ -488,12 +533,12 @@ router.post('/Register/CounterRegister', async (req, res) =>{
             "message": "Internal Server Error" // error.sqlMessage
         })
 
-        const result = {
-            "status": 200,
+        // const result = {
+        //     "status": 200,
           
-        }
+        // }
 
-        return res.json(result)
+        return res.json(results[0])
      
         
     })
