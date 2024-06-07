@@ -163,6 +163,39 @@ router.post('/Register/updateStatusRegister', (req,res) => {
         console.log('addRegister',error);
     }
 })
+router.post('/Register/updateStatusReceipt', (req,res) => {
+    try {
+
+
+        updateData =  {
+            "status_receipt"   : req.body.status_receipt,
+            "modified_by"       : req.body.modified_by,
+            "modified_date"     : req.body.modified_date
+        }
+
+
+        const sql = 'UPDATE register SET ? WHERE id = ?'; 
+        db.query(sql,[updateData, req.body.register_id],(error, results, fields) => {
+
+            console.log(error);
+            
+            if (error) return res.status(500).json({
+                "status": 500,
+                "message": "Internal Server Error" // error.sqlMessage
+            })
+
+            const result = {
+                "status": 200,
+            }
+
+
+            return res.json(result)
+
+        })
+    } catch (error) {
+        console.log('addRegister',error);
+    }
+})
 
 router.post('/Register/MapStatusReceipt', (req,res) => {
 
@@ -352,6 +385,8 @@ router.get('/Register/getRegisterById/:id', (req, res) => {
             FROM register
             WHERE register.id = ? 
         `;
+
+        
       
         // const sql = "SELECT * FROM register WHERE id = " + `'${req.params.id}'`
         const register_id = req.params.id
@@ -428,10 +463,25 @@ router.post('/Register/sendMail', async (req, res) => {
 router.get('/Register/checkEmail', (req, res) => {
     
     const { email } = req.query;
-    
-    const query = `SELECT * FROM register WHERE email = ?`
+    let query;
+    let parameters = [];
 
-    db.query(query, email, function(error, results, fields){
+    // ตรวจสอบว่ามีการส่ง email มาหรือไม่
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // กำหนด query ให้เป็นการค้นหาโดยใช้ email หากมี email ถูกส่งมา
+    // หากไม่มี email ถูกส่งมา ให้ใช้ employee_id แทน
+    query = 'SELECT * FROM register WHERE email = ? OR employee_id = ?';
+
+    // ใส่ค่า email ลงใน parameters
+    parameters.push(email);
+
+    // ใส่ค่า email ลงใน parameters อีกครั้ง เพื่อใช้ในการค้นหาโดยใช้ employee_id ถ้ามี
+    parameters.push(email);
+
+    db.query(query, parameters, function(error, results, fields){
 
         console.log(results);
 
@@ -440,38 +490,50 @@ router.get('/Register/checkEmail', (req, res) => {
             res.status(500).json({ error: 'Internal server error' });
         } else {
             if (results.length > 0) {
-              // Email มีอยู่แล้ว
-              res.json({ exists: true, message: 'Email already exists in the database', data: results });
+                // Email หรือ Employee ID มีอยู่แล้ว
+                res.json({ exists: true, message: 'Email or Employee ID already exists in the database', data: results });
             } else {
-              // Email ไม่มีอยู่ในฐานข้อมูล
-              res.json({ exists: false, message: 'Email does not exist in the database' });
+                // Email หรือ Employee ID ไม่มีอยู่ในฐานข้อมูล
+                res.json({ exists: false, message: 'Email or Employee ID does not exist in the database' });
             }
         }
 
-    })
+    });
 
 });
 
+
 router.get('/Register/checkPhone', (req, res) => {
-    
-    // const { phone, email } = req.query;
 
-   
-  
+    let query;
+    let parameters = [];
 
-    const sql = `SELECT * FROM register WHERE phone = ? AND email = ? `;
+    // ตรวจสอบว่ามีการส่ง email และ phone มาหรือไม่
+    if (!req.query.email || !req.query.phone) {
+        return res.status(400).json({ error: 'Email and phone are required' });
+    }
 
-    db.query(sql, [req.query.phone, req.query.email], function(error, results, fields){
+    // กำหนด query ให้เป็นการค้นหาโดยใช้ email หากมี email ถูกส่งมา
+    // หากไม่มี email ถูกส่งมา ให้ใช้ employee_id แทน
+    query = `SELECT * FROM register WHERE phone = ? AND (email = ? OR employee_id = ?)`;
+
+    // ใส่ค่า phone, email, และ email อีกครั้ง (สำหรับ employee_id) ลงใน parameters
+    parameters.push(req.query.phone);
+    parameters.push(req.query.email);
+    parameters.push(req.query.email);
+
+    // เรียกใช้ query ในฐานข้อมูล
+    db.query(query, parameters, function(error, results, fields){
 
         if (error) {
             console.error('Error checking Phone:', error);
             res.status(500).json({ error: 'Internal server error' });
         } else {
             if (results.length > 0) {
-              // Email มีอยู่แล้ว
+              // พบข้อมูลที่ตรงกับเบอร์โทรศัพท์และอีเมล์หรือไอดีของพนักงานที่ระบุ
               res.json({ success: true, message: 'Phone already exists in the database', data: results });
             } else {
-              // Email ไม่มีอยู่ในฐานข้อมูล
+              // ไม่พบข้อมูลที่ตรงกับเบอร์โทรศัพท์และอีเมล์หรือไอดีของพนักงานที่ระบุ
               res.json({ success: false, message: 'Phone does not exist in the database' });
             }
         }
@@ -479,6 +541,63 @@ router.get('/Register/checkPhone', (req, res) => {
     })
 
 });
+
+// router.get('/Register/checkEmail', (req, res) => {
+    
+//     const { email } = req.query;
+    
+
+//     const sql = 'SELECT * FROM register WHERE email = ? OR employee_id= ?"';
+    
+//     db.query(sql, email, function(error, results, fields){
+
+//         console.log(results);
+
+//         if (error) {
+//             console.error('Error checking email:', error);
+//             res.status(500).json({ error: 'Internal server error' });
+//         } else {
+//             if (results.length > 0) {
+//               // Email มีอยู่แล้ว
+//               res.json({ exists: true, message: 'Email already exists in the database', data: results });
+//             } else {
+//               // Email ไม่มีอยู่ในฐานข้อมูล
+//               res.json({ exists: false, message: 'Email does not exist in the database' });
+//             }
+//         }
+
+//     })
+
+// });
+
+
+// router.get('/Register/checkPhone', (req, res) => {
+    
+//     // const { phone, email } = req.query;
+
+
+//     const sql = `SELECT * FROM register WHERE phone = ? AND email = ? `;
+
+//     db.query(sql, [req.query.phone, req.query.email], function(error, results, fields){
+
+// console.log('===========',req.query.phone);
+// console.log('===========',req.query.email);
+//         if (error) {
+//             console.error('Error checking Phone:', error);
+//             res.status(500).json({ error: 'Internal server error' });
+//         } else {
+//             if (results.length > 0) {
+//               // Email มีอยู่แล้ว
+//               res.json({ success: true, message: 'Phone already exists in the database', data: results });
+//             } else {
+//               // Email ไม่มีอยู่ในฐานข้อมูล
+//               res.json({ success: false, message: 'Phone does not exist in the database' });
+//             }
+//         }
+
+//     })
+
+// });
 
 router.get('/Register/getMenuRegisterOpening', (req, res) => {
     
