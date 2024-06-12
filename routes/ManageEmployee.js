@@ -4,6 +4,7 @@ const router = express.Router();
 
 const db  = require('../config/db'); // เรียกใช้งานเชื่อมกับ MySQL
 
+
 router.post('/ManageEmployee/createEmployee', (req, res) => {
 
     try {
@@ -81,6 +82,7 @@ router.post('/ManageEmployee/updateEmployee', (req,res) => {
                         "approve_employee"          : employee[0].approve_employee== '1'? true:false,
                         "edit_receipt"              : employee[0].edit_receipt== '1'? true:false,
                         "refund_receipt"            : employee[0].refund_receipt== '1'? true:false,
+                        "refund_register"           : employee[0].refund_register== '1'? true:false,
                         "receive_receipt"           : employee[0].receive_receipt== '1'? true:false,
                         "preview_receipt"           : employee[0].preview_receipt== '1'? true:false,
                         "menu_register"             : employee[0].menu_register== '1'? true:false,
@@ -109,6 +111,56 @@ router.post('/ManageEmployee/updateEmployee', (req,res) => {
     } catch (error) {
         console.log('getEmployee',error);
     }
+});
+
+router.get('/ManageEmployee/EmployeeFinance', (req, res) => {
+
+    let sql =  `
+        SELECT employee.employee_id, employee.role_id, employee.full_name, employee.first_name, employee.last_name, role.* 
+        FROM employee 
+        left join role on employee.role_id = role.id
+        WHERE role.role_name = 'Finance'
+    `
+    db.query(sql,  function(err, result, fields){
+
+
+        if (err) res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error" // error.sqlMessage
+        })
+
+        // res.json({ success: true, message: 'Phone already exists in the database', data: result });
+        res.status(200).json({
+            data: result,
+            message: "success"
+        }); 
+    })
+});
+
+router.get('/ManageEmployee/EmployeeFinanceById', (req, res) => {
+
+    const { admin_id } = req.query;
+
+
+
+    let sql =  `
+        SELECT employee_id, full_name, first_name, last_name
+        FROM employee 
+        WHERE employee_id = ?
+    `
+    db.query(sql, admin_id, function(err, result, fields){
+
+        if (err) res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error" // error.sqlMessage
+        })
+
+        // res.json({ success: true, message: 'Phone already exists in the database', data: result });
+        res.status(200).json({
+            data: result[0],
+            message: "success"
+        }); 
+    })
 });
 
 
