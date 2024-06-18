@@ -11,7 +11,7 @@ const path          = require('path');
 router.post('/Register/addRegister', (req,res) => {
     try {
 
-        console.log(req.body);
+     
         const sql = "INSERT INTO register SET ?"
         db.query(sql,req.body,(error, results, fields) => {
 
@@ -147,19 +147,27 @@ router.post('/Register/updateStatusRegister', (req,res) => {
         const sql = 'UPDATE register SET ? WHERE id = ?'; 
         db.query(sql,[updateData, req.body.register_id],(error, results, fields) => {
 
-            console.log(error);
-            
-            if (error) return res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
+            console.log(results);
+            if (error) {
+                console.error('Error checking email:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            } else {
+                // if (results.length > 0) {
 
-            const result = {
-                "status": 200,
+                    // Email หรือ Employee ID มีอยู่แล้ว
+                    res.json({ response: true, status: 200, message: 'update status_register and cancel_order already exists in the database'});
+                    
+                    if(req.body.register_type === '40002' && req.body.cancel_order === '11001' && req.body.status_register === '12003'){
+                        
+                        const response = htmlContentCancelRegister(req.body.email, req.body.course_type, req.body.check_course_other)
+
+                        console.log(response);
+                    }else if(req.body.register_type === '40002' && req.body.status_register === '12003'){
+                        htmlContentPayment(req.body.email, req.body.check_course_other)
+                    }
+                    
+                    
             }
-
-
-            return res.json(result)
 
         })
     } catch (error) {
@@ -176,6 +184,8 @@ router.post('/Register/updateStatusReceipt', (req,res) => {
             "modified_date"     : req.body.modified_date
         }
 
+        console.log(updateData);
+
 
         const sql = 'UPDATE register SET ? WHERE id = ?'; 
         db.query(sql,[updateData, req.body.register_id],(error, results, fields) => {
@@ -188,7 +198,7 @@ router.post('/Register/updateStatusReceipt', (req,res) => {
             })
 
             const result = {
-                "status": 200,
+                response: true,
             }
 
 
@@ -200,98 +210,81 @@ router.post('/Register/updateStatusReceipt', (req,res) => {
     }
 })
 
-router.post('/Register/MapStatusReceipt', (req,res) => {
-
+router.post('/Register/MapStatusReceipt', async (req, res) => {
     try {
+        const updateData = {
+            "status_register": req.body.status_register,
+            "modified_by": req.body.modified_by,
+            "modified_date": req.body.modified_date
+        };
 
+        const sql = 'UPDATE register SET ? WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price = ? AND status_register = ?';
 
-        updateData =  {
-            "status_register"   : req.body.status_register,
-            "modified_by"       : req.body.modified_by,
-            "modified_date"     : req.body.modified_date
-        }
+        const updateResult = await new Promise((resolve, reject) => {
+            db.query(sql, [updateData, req.body.reference_no_1, req.body.reference_no_2, req.body.course_price, '12001'], (error, results, fields) => {
+                if (error) {
+                   console.log("error===>" , error)
+                } else {
+                    resolve(results);
+                }
+            });
+        });
 
-        const sql = 'UPDATE register SET ? WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price = ? AND status_register = ?'; 
+        if (updateResult.changedRows === 1) {
+            const receiptData = await new Promise((resolve, reject) => {
+                const sql_select = 'SELECT id, name_th, lastname_th, email, course_name, course_price, check_course_other FROM register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price';
+                db.query(sql_select, [req.body.reference_no_1, req.body.reference_no_2, req.body.course_price], (error, results_data, fields) => {
+                    if (error) {
+                        console.log("error 2 ===>" , error)
 
-        db.query(sql,[updateData, req.body.reference_no_1, req.body.reference_no_2, req.body.course_price, '12001'],(error, results, fields) => {
+                    } else {
+                        resolve(results_data);
+                    }
+                });
+            });
 
-            let reference_no_1 = ''
-            let reference_no_2 = ''
-            let course_price = ''
+            const countResult = await new Promise((resolve, reject) => {
+                const sql_count = 'SELECT COUNT(*) as SUCCESS FROM  register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price';
+                db.query(sql_count, [req.body.reference_no_1, req.body.reference_no_2, req.body.course_price], (error, results, fields) => {
+                    if (error) {
+                        console.log("error 3 ===>" , error)
 
-            if (error) return res.status(500).json({
-                "status": 500,
-                "message": "Internal Server Error" // error.sqlMessage
-            })
+                    } else {
+                        resolve(results);
+                    }
+                });
+            });
 
-        
-            if(results.changedRows === 1){
+            const result = {
+                "dataSUCCESS": countResult[0],
+                "receiptData": receiptData,
+                "response": true
+            };
 
-                reference_no_1  = req.body.reference_no_1
-                reference_no_2  = req.body.reference_no_2
-                course_price  = req.body.course_price
-
-                const sql_select = 'SELECT name_th, lastname_th, email, course_name, check_course_other FROM register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
-
-                db.query(sql_select,[reference_no_1, reference_no_2, course_price],(error, results_data, fields) => {
-    
-                    if (error) return res.status(500).json({
-                        "status": 500,
-                        "message": "Internal Server Error" // error.sqlMessage
-                    })
-                    
-                    results_data.forEach(row => {
-                       
-    
+            receiptData.forEach(row => {
                         htmlContentPayment(row.email, row.check_course_other)
-    
-                    });
-    
-                })
-                // }else{
-            //     console.error('Error updating record:', false);
-            }
+               });
 
-            // let countReceipt = ''
-          
-            const sql_count = 'SELECT COUNT(*) as SUCCESS FROM  register WHERE reference_no_1 = ? AND reference_no_2 = ? AND course_price'; 
+            return res.json(result);
+        } else {
+            // Handle error if updateResult.changedRows !== 1
+            const result = {
+                "dataSUCCESS": [],
+                "receiptData":[],
+                "response": false
+            };
 
-            db.query(sql_count,[reference_no_1, reference_no_2, course_price],(error, results, fields) => {
-    
-                if (error) return res.status(500).json({
-                    "status": 500,
-                    "message": "Internal Server Error" // error.sqlMessage
-                })
-
-                // countReceipt = results
-    
-                return res.json(results);
-    
-                
-    
-            })
-
-            // const result = {
-
-            //     "status": 200,
-            //     "dataReceipt" : dataReceipt,
-            //     "countReceipt" : countReceipt,
-            // }
-
-
-            // return res.json(result);
-            // const result = {
-            //     "status": 200,
-            // }
-
-
-            // return res.json(result)
-
-        })
+            return res.json(result);
+        }
     } catch (error) {
-        console.log('addRegister',error);
+        console.log('addRegister', error);
+        return res.status(500).json({
+            "status": 500,
+            "message": "Internal Server Error"
+        });
     }
-})
+});
+
 
 router.post('/Register/MapRefAndAmount', (req,res) => {
 
@@ -336,7 +329,8 @@ router.get('/Register/getRegister', (req, res) => {
             J.name AS provinceName,
             K.name AS districtName,
             L.name AS subdistrictName,
-            M.name AS cancelOrderName
+            M.name AS cancelOrderName,
+            N.name AS receiptOrderName
 
             FROM register AS A
             
@@ -356,6 +350,7 @@ router.get('/Register/getRegister', (req, res) => {
             AND L.district_code = A.district_id  
             AND L.sub_district_code = A.subdistrict_id
             LEFT JOIN select_list AS M ON A.cancel_order = M.select_code
+            LEFT JOIN select_list AS N ON A.receipt_order = N.select_code
 
             ORDER BY A.id DESC
         `;
@@ -382,13 +377,16 @@ router.get('/Register/statusRegisterReceipt', (req, res) => {
     try {
 
         const query = `
-            SELECT A.*, B.name AS  statusRegisterName, C.name AS statusReceiptName
+            SELECT A.*, B.name AS  statusRegisterName, C.name AS statusReceiptName, D.name AS titleName
             FROM register AS A
             LEFT JOIN select_list AS B
             ON  A.status_register = B.select_code
             LEFT JOIN select_list AS C
             ON A.status_receipt = C.select_code
-            WHERE A.status_register = '12003'
+            LEFT JOIN select_list AS D
+            ON A.title_name = D.select_code
+            WHERE A.register_type = '40002'
+
         `;
 
         db.query(query,  function(err, result, fields){
@@ -427,8 +425,8 @@ router.get('/Register/getRegisterById/:id', (req, res) => {
             J.name AS provinceName,
             K.name AS districtName,
             L.name AS subdistrictName,
-            M.type_register, M.course_type, M.course_price, M.course_seminar, M.course_detail
-
+            M.type_register, M.course_type, M.course_price, M.course_seminar, M.course_detail,
+            N.name AS cancelOrderName
             FROM register AS A
             
             LEFT JOIN select_list AS B ON A.register_type = B.select_code
@@ -447,7 +445,8 @@ router.get('/Register/getRegisterById/:id', (req, res) => {
             AND L.district_code = A.district_id  
             AND L.sub_district_code = A.subdistrict_id
             LEFT JOIN select_list AS M ON A.course_id = M.select_code 
-                
+            LEFT JOIN select_list AS N ON A.cancel_order = N.select_code
+
             WHERE A.id = ? 
         `;
 
@@ -627,7 +626,7 @@ router.get('/Register/getMenuRegisterOpening', (req, res) => {
     const query = `
     SELECT * 
     FROM register_opening_date 
-    WHERE start_date >= NOW() AND end_date <= NOW();
+    WHERE start_date <= NOW() AND end_date >= NOW();
     
     `
 
@@ -636,7 +635,7 @@ router.get('/Register/getMenuRegisterOpening', (req, res) => {
             console.error('Error checking Phone:', error);
             res.status(500).json({ error: 'Internal server error' });
         } else {
-            if (!results) {
+            if (results.length > 0) {
               // มีอยู่แล้ว
               res.json(true);
             } else {
@@ -662,7 +661,7 @@ router.get('/Register/CounterRegister', async (req, res) =>{
         SELECT Count(*) as COUNT,
         IFNULL( SUM(check_course_other) , 0) AS sum_check_course_other 
         from register  
-        WHERE course_id in (17001,17002) AND status_register = '11001'
+        WHERE course_id in (17001,17002) AND cancel_order <> '11001'
     `;
 
    
@@ -694,9 +693,9 @@ router.post('/Register/sendMailRegister', async (req, res) => {
         port: 587, //25, 465, 587 depend on your 
         secure: false, // use SSL\
         auth: {
-            user: 'sawitta.sri@cra.ac.th', // your Outlook email address
-            pass: 'Jiji180939*' // your Outlook email password
-          }  
+            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            pass: 'fay*0890523714' // your Outlook email password
+        }  
     };
 
     const register_type         = req.body.register_type
@@ -724,8 +723,9 @@ router.post('/Register/sendMailRegister', async (req, res) => {
 
     // // สร้างตัวเลือกสำหรับอีเมล
     let mailOptions = {
-        from: "sawitta.sri@cra.ac.th",
+        from: "daraporn.dua@cra.ac.th",
         to: req.body.email,
+        cc: "sawitta.sri@cra.ac.th",
         subject: subject,
         html: html,
         attachments: [{
@@ -973,49 +973,193 @@ function htmlContent(register_type,course_type,check_course_other) {
 
 }
 
-// router.post('/Register/sendMailPayment', async (req, res) => {
-    
-//     var smtp = await {
-//         host: 'smtp.office365.com', //set to your host name or ip
-//         port: 587, //25, 465, 587 depend on your 
-//         secure: false, // use SSL\
-//         auth: {
-//             user: 'sawitta.sri@cra.ac.th', // your Outlook email address
-//             pass: 'Jiji180939*' // your Outlook email password
-//           }  
-//     };
 
-//     const course_name           = req.body.course_name
-//     const check_course_other    = req.body.check_course_other
+function htmlContentCancelRegister(email, course_type, check_course_other) {
+
+    const Path1 = path.join(__dirname, '../uploads', 'แบบแจ้งข้อมูลการขอคืนเงินค่าอบรม (Request for refund).pdf');
+    const filePath1 = path.resolve(Path1);
 
 
-//     // let html = htmlContentPayment(email, course_name, check_course_other)
+    var smtp =  {
+        host: 'smtp.office365.com', //set to your host name or ip
+        port: 587, //25, 465, 587 depend on your 
+        secure: false, // use SSL\
+        auth: {
+            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            pass: 'fay*0890523714' // your Outlook email password
+          }  
+    };
 
 
-//     // // สร้างตัวเลือกสำหรับอีเมล
-//     let mailOptions = {
-//         from: "sawitta.sri@cra.ac.th",
-//         to: "sawitta.sri@cra.ac.th",
-//         subject: 'Test Email with Image',
-//         html: html,
-//     };
+    let html = ''
 
-//     var transporter = await nodemailer.createTransport(smtp);
+    let subject = ''
 
-//     try {
-//         // Send email
+    // if(check_course_other || status_register === '12001'){
+
+    //     subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
         
-//         await transporter.sendMail(mailOptions);
+    //         //	        subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
+        
+    //         //	สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP และ Data Analysis  (Onsite)
+            
+    //         html = `<div class="container">     
+    //         <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
+    //         <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
+    //         <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    //         <br>
+    //         <br>
+    //         <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+    //         <p>ขอแสดงความนับถือ</p>
+    //         <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    //     </div>`;
+            
+    //         html = `<div class="container">     
+    //         <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
+    //         <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
+    //         <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    //         <br>
+    //         <br>
+    //         <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+    //         <p>ขอแสดงความนับถือ</p>
+    //         <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    //     </div>`;
+    // }else if(!check_course_other || status_register === '12001'){
+    //     subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming'
+        
+    //     //		สำหรับบุคลากรภายใน ผู้ลงทะเบียนอบรม GCP และ Data Analysis (ไม่มีค่าลงทะเบียน) + สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP และ Data Analysis   (Onsite)  (ยังไม่ชำระเงิน)
+        
+    //     html = `<div class="container">     
+    //     <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming</p>    
+    //     <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
+    //     <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming วันที่ 24-26 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    //     <br>
+    //     <br>
+    //     <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+    //     <p>ขอแสดงความนับถือ</p>
+    //     <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+    // </div>`;
+    // }else 
+    if(course_type === 'Onsite' && !check_course_other){
 
+        subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
+
+        // 		สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP อย่างเดียว   (Onsite)
+
+        html = `<div class="container">     
+        <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
+        <p>เรียน ผู้แจ้งความประสงค์ขอคืนเงิน</p>
+        <p>ตามที่ท่านได้ลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก นั้น
+        โดยได้มีรายการชำระเงิน ดังนี้
+        </p>
+        <li>- ค่าสมัครการอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</li><br>
+        <li>เป็นจำนวนเงิน 1,500 บาท (หนึ่งพันห้าร้อยบาทถ้วน)</li>
+        <p>ท่านมีความประสงค์ยกเลิกการลงทะเบียนเข้าอบรม เนื่องจากไม่สะดวกเข้าร่วมการอบรมดังกล่าว จึงขอคืนเงินค่าสมัครการอบรม ท่านรับรองและยินยอมให้ข้อมูลการขอคืนเงินค่าอบรม/สัมมนา และ หลักฐานการชำระเงินค่าสมัครอบรมฯ ดังกล่าว โปรดกรอกรายละเอียดในแบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (ดังไฟล์แนบ) และ กรุณานำส่งเอกสาร ดังนี้</p>
+        <p>ผู้แจ้งความประสงค์ขอคืนเงิน ส่งเอกสารตอบกลับ ภายใน 7 วันทำการ (หลังแจ้งขอยกเลิกลงทะเบียนในระบบฯ)</p>
+        <li>1. แบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (Request for refund)</li>
+        <li>2. สำเนาบัตรประชาชน (เซ็นรับรองสำเนาถูกต้อง)</li>
+        <li>3. สำเนาหน้าบัญชีธนาคาร (เซ็นรับรองสำเนาถูกต้อง)</li>
+        <li>4. หลักฐานการชำระค่าสมัครอบรม (ใบที่พิมพ์ใบชำระเงิน และ สลิปโอนเงินรายการนั้น)</li>
+        <li>5. ใบเสร็จรับเงิน ชำระค่าสมัครอบรม</li>
+        <br>
+        <br>
+        <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+        <p>ขอแสดงความนับถือ</p>
+        <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+        </div>`;
+    }else if(course_type === 'Onsite' && check_course_other){
+
+        subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming'
+      
+          //	สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP และ Data Analysis  (Onsite)
+          
+          html = `<div class="container">     
+          <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming</p>    
+          <p>เรียน ผู้แจ้งความประสงค์ขอคืนเงิน</p>
+          <p>ตามที่ท่านได้ลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming วันที่ 24-26 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก นั้น
+          โดยได้มีรายการชำระเงิน ดังนี้          
+          </p>
+          <li>- ค่าสมัครการอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 
+          และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming
+          </li>
+          <li>เป็นจำนวนเงิน 1,500 บาท (หนึ่งพันห้าร้อยบาทถ้วน)</li>
+          <p>ท่านมีความประสงค์ยกเลิกการลงทะเบียนเข้าอบรม เนื่องจากไม่สะดวกเข้าร่วมการอบรมดังกล่าว จึงขอคืนเงินค่าสมัครการอบรม ท่านรับรองและยินยอมให้ข้อมูลการขอคืนเงินค่าอบรม/สัมมนา และ หลักฐานการชำระเงินค่าสมัครอบรมฯ ดังกล่าว โปรดกรอกรายละเอียดในแบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (ดังไฟล์แนบ) และ กรุณานำส่งเอกสาร ดังนี้</p>
+          <p>ผู้แจ้งความประสงค์ขอคืนเงิน ส่งเอกสารตอบกลับ ภายใน 7 วันทำการ (หลังแจ้งขอยกเลิกลงทะเบียนในระบบฯ)</p>
+          <li>1. แบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (Request for refund)</li>
+          <li>2. สำเนาบัตรประชาชน (เซ็นรับรองสำเนาถูกต้อง)</li>
+          <li>3. สำเนาหน้าบัญชีธนาคาร (เซ็นรับรองสำเนาถูกต้อง)</li>
+          <li>4. หลักฐานการชำระค่าสมัครอบรม (ใบที่พิมพ์ใบชำระเงิน และ สลิปโอนเงินรายการนั้น)</li>
+          <li>5. ใบเสร็จรับเงิน ชำระค่าสมัครอบรม</li>
+          <br>
+          <br>
+          <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+          <p>ขอแสดงความนับถือ</p>
+          <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+          </div>`;
+    }else if(course_type === 'Online'){
+
+        subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
+      
+        // สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP   (Online)
+        
+        html = `<div class="container">     
+            <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
+            <p>เรียน ผู้แจ้งความประสงค์ขอคืนเงิน</p>
+            <p>ตามที่ท่านได้ลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก นั้น
+            โดยได้มีรายการชำระเงิน ดังนี้                      
+            </p>
+            <li>- ค่าสมัครการอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 
+            และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming            
+            </li>
+            <li>เป็นจำนวนเงิน 1,000 บาท (หนึ่งพันบาทถ้วน)</li>
+            <p>ท่านมีความประสงค์ยกเลิกการลงทะเบียนเข้าอบรม เนื่องจากไม่สะดวกเข้าร่วมการอบรมดังกล่าว จึงขอคืนเงินค่าสมัครการอบรม ท่านรับรองและยินยอมให้ข้อมูลการขอคืนเงินค่าอบรม/สัมมนา และ หลักฐานการชำระเงินค่าสมัครอบรมฯ ดังกล่าว โปรดกรอกรายละเอียดในแบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (ดังไฟล์แนบ) และ กรุณานำส่งเอกสาร ดังนี้</p>
+            <p>ผู้แจ้งความประสงค์ขอคืนเงิน ส่งเอกสารตอบกลับ ภายใน 7 วันทำการ (หลังแจ้งขอยกเลิกลงทะเบียนในระบบฯ)</p>
+            <li>1. แบบฟอร์มแจ้งข้อมูลการขอคืนเงินค่าอบรม (Request for refund)</li>
+            <li>2. สำเนาบัตรประชาชน (เซ็นรับรองสำเนาถูกต้อง)</li>
+            <li>3. สำเนาหน้าบัญชีธนาคาร (เซ็นรับรองสำเนาถูกต้อง)</li>
+            <li>4. หลักฐานการชำระค่าสมัครอบรม (ใบที่พิมพ์ใบชำระเงิน และ สลิปโอนเงินรายการนั้น)</li>
+            <li>5. ใบเสร็จรับเงิน ชำระค่าสมัครอบรม</li>
+            <br>
+            <br>
+            <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
+            <p>ขอแสดงความนับถือ</p>
+            <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
+        </div>`;
+    }
+
+     // // สร้างตัวเลือกสำหรับอีเมล
+     let mailOptions = {
+        from: "daraporn.dua@cra.ac.th",
+        to: email,
+        cc: "sawitta.sri@cra.ac.th",
+        subject: subject,
+        html: html,
+        attachments: [{
+            filename: 'แบบแจ้งข้อมูลการขอคืนเงินค่าอบรม (Request for refund).pdf',
+            path: filePath1,
+            // cid: 'Request for refund' // same cid value as in the html img src
+        }]
+    };
+
+    var transporter = nodemailer.createTransport(smtp);
+
+    try {
+        // Send email
+        
+        transporter.sendMail(mailOptions);
+
+
+        return 'Email sent successfully'
     
-//         res.status(200).json({ message: 'Email sent successfully' });
-//       } catch (error) {
-//         console.error('Error sending email:', error);
-//         res.status(500).json({ message: 'Failed to send email' });
-//       }
+        // res.status(200).json({ message: 'Email sent successfully' });
+      } catch (error) {
 
-// });
+        return error + 'Failed to send email'
+     
+        // res.status(500).json({ message: 'Failed to send email' });
+      }
 
+}
 
 function htmlContentPayment(email, check_course_other) {
 
@@ -1024,8 +1168,8 @@ function htmlContentPayment(email, check_course_other) {
         port: 587, //25, 465, 587 depend on your 
         secure: false, // use SSL\
         auth: {
-            user: 'sawitta.sri@cra.ac.th', // your Outlook email address
-            pass: 'Jiji180939*' // your Outlook email password
+            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            pass: 'fay*0890523714' // your Outlook email password
           }  
     };
 
@@ -1081,8 +1225,9 @@ function htmlContentPayment(email, check_course_other) {
 
      // // สร้างตัวเลือกสำหรับอีเมล
      let mailOptions = {
-        from: "sawitta.sri@cra.ac.th",
+        from: "daraporn.dua@cra.ac.th",
         to: register_email,
+        cc: "sawitta.sri@cra.ac.th",
         subject: subject,
         html: html,
     };
