@@ -377,14 +377,16 @@ router.get('/Register/statusRegisterReceipt', (req, res) => {
     try {
 
         const query = `
-            SELECT A.*, B.name AS  statusRegisterName, C.name AS statusReceiptName, D.name AS titleName
+            SELECT A.*, 
+            B.name AS  statusRegisterName, 
+            C.name AS statusReceiptName, 
+            D.name AS titleName,
+            E.name AS cancelOrderName
             FROM register AS A
-            LEFT JOIN select_list AS B
-            ON  A.status_register = B.select_code
-            LEFT JOIN select_list AS C
-            ON A.status_receipt = C.select_code
-            LEFT JOIN select_list AS D
-            ON A.title_name = D.select_code
+            LEFT JOIN select_list AS B ON  A.status_register = B.select_code
+            LEFT JOIN select_list AS C ON A.status_receipt = C.select_code
+            LEFT JOIN select_list AS D ON A.title_name = D.select_code
+            LEFT JOIN select_list AS E ON A.cancel_order = E.select_code
             WHERE A.register_type = '40002'
 
         `;
@@ -694,7 +696,7 @@ router.post('/Register/sendMailRegister', async (req, res) => {
         secure: false, // use SSL\
         auth: {
             user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*0890523714' // your Outlook email password
+            pass: 'fay*1996' // your Outlook email password
         }  
     };
 
@@ -986,7 +988,7 @@ function htmlContentCancelRegister(email, course_type, check_course_other) {
         secure: false, // use SSL\
         auth: {
             user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*0890523714' // your Outlook email password
+            pass: 'fay*1996' // your Outlook email password
           }  
     };
 
@@ -1169,7 +1171,7 @@ function htmlContentPayment(email, check_course_other) {
         secure: false, // use SSL\
         auth: {
             user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*0890523714' // your Outlook email password
+            pass: 'fay*1996' // your Outlook email password
           }  
     };
 
