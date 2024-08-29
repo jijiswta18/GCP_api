@@ -1,3 +1,4 @@
+
 const mysql = require('mysql')
 
 // Create connection

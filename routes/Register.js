@@ -462,9 +462,10 @@ router.get('/Register/getRegisterById/:id', (req, res) => {
                 "status": 500,
                 "message": "Internal Server Error" // error.sqlMessage
             })
+            
 
             res.status(200).json({
-                data: result,
+                data: result[0],
                 message: "success"
             }); 
         })
@@ -695,8 +696,10 @@ router.post('/Register/sendMailRegister', async (req, res) => {
         port: 587, //25, 465, 587 depend on your 
         secure: false, // use SSL\
         auth: {
-            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*1996' // your Outlook email password
+            user: 'sawitta.sri@cra.ac.th', // your Outlook email address
+            pass: 'Jiji180939*1' // your Outlook email password
+            // user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            // pass: 'fay*1996' // your Outlook email password
         }  
     };
 
@@ -725,7 +728,8 @@ router.post('/Register/sendMailRegister', async (req, res) => {
 
     // // สร้างตัวเลือกสำหรับอีเมล
     let mailOptions = {
-        from: "daraporn.dua@cra.ac.th",
+        from: "sawitta.sri@cra.ac.th",
+        // from: "daraporn.dua@cra.ac.th",
         to: req.body.email,
         cc: "sawitta.sri@cra.ac.th",
         subject: subject,
@@ -987,8 +991,10 @@ function htmlContentCancelRegister(email, course_type, check_course_other) {
         port: 587, //25, 465, 587 depend on your 
         secure: false, // use SSL\
         auth: {
-            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*1996' // your Outlook email password
+            user: 'sawitta.sri@cra.ac.th', // your Outlook email address
+            pass: 'Jiji180939*1' // your Outlook email password
+            // user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            // pass: 'fay*1996' // your Outlook email password
           }  
     };
 
@@ -997,51 +1003,6 @@ function htmlContentCancelRegister(email, course_type, check_course_other) {
 
     let subject = ''
 
-    // if(check_course_other || status_register === '12001'){
-
-    //     subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
-        
-    //         //	        subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
-        
-    //         //	สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP และ Data Analysis  (Onsite)
-            
-    //         html = `<div class="container">     
-    //         <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
-    //         <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
-    //         <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    //         <br>
-    //         <br>
-    //         <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
-    //         <p>ขอแสดงความนับถือ</p>
-    //         <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    //     </div>`;
-            
-    //         html = `<div class="container">     
-    //         <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567</p>    
-    //         <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
-    //         <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 วันที่ 24-25 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    //         <br>
-    //         <br>
-    //         <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
-    //         <p>ขอแสดงความนับถือ</p>
-    //         <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    //     </div>`;
-    // }else if(!check_course_other || status_register === '12001'){
-    //     subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming'
-        
-    //     //		สำหรับบุคลากรภายใน ผู้ลงทะเบียนอบรม GCP และ Data Analysis (ไม่มีค่าลงทะเบียน) + สำหรับบุคลากรภายนอก ผู้ลงทะเบียนอบรม GCP และ Data Analysis   (Onsite)  (ยังไม่ชำระเงิน)
-        
-    //     html = `<div class="container">     
-    //     <p><b>เรื่อง</b> แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming</p>    
-    //     <p>เรียน ผู้แจ้งความประสงค์ขอยกเลิกลงทะเบียนฯ</p>
-    //     <p>ขอแจ้งยกเลิกการลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567 และ การอบรมเชิงปฏิบัติการ หัวข้อ " Data Analysis in Clinical Research Using R Programming วันที่ 24-26 กรกฏาคม 2567 เวลา 08.00 – 16.00 น. จัดโดย ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    //     <br>
-    //     <br>
-    //     <p>จึงเรียนมาเพื่อดำเนินการตามที่ได้แจ้งไว้ ณ ที่นี้</p>
-    //     <p>ขอแสดงความนับถือ</p>
-    //     <p>ฝ่ายพัฒนางานวิจัยทางคลินิก</p>
-    // </div>`;
-    // }else 
     if(course_type === 'Onsite' && !check_course_other){
 
         subject = 'แจ้งขอยกเลิกลงทะเบียนเข้าร่วม การอบรมหลักสูตร " แนวทางปฏิบัติการวิจัยทางคลินิกที่ดี (Good Clinical Practice: GCP)" 2567'
@@ -1131,7 +1092,8 @@ function htmlContentCancelRegister(email, course_type, check_course_other) {
 
      // // สร้างตัวเลือกสำหรับอีเมล
      let mailOptions = {
-        from: "daraporn.dua@cra.ac.th",
+        from: "sawitta.sri@cra.ac.th",
+        // from: "daraporn.dua@cra.ac.th",
         to: email,
         cc: "sawitta.sri@cra.ac.th",
         subject: subject,
@@ -1170,8 +1132,10 @@ function htmlContentPayment(email, check_course_other) {
         port: 587, //25, 465, 587 depend on your 
         secure: false, // use SSL\
         auth: {
-            user: 'daraporn.dua@cra.ac.th', // your Outlook email address
-            pass: 'fay*1996' // your Outlook email password
+            user: 'sawitta.sri@cra.ac.th', // your Outlook email address
+            pass: 'Jiji180939*1' // your Outlook email password
+            // user: 'daraporn.dua@cra.ac.th', // your Outlook email address
+            // pass: 'fay*1996' // your Outlook email password
           }  
     };
 
@@ -1227,7 +1191,8 @@ function htmlContentPayment(email, check_course_other) {
 
      // // สร้างตัวเลือกสำหรับอีเมล
      let mailOptions = {
-        from: "daraporn.dua@cra.ac.th",
+        from: "sawitta.sri@cra.ac.th",
+        // from: "daraporn.dua@cra.ac.th",
         to: register_email,
         cc: "sawitta.sri@cra.ac.th",
         subject: subject,
